@@ -28,6 +28,7 @@ def landuse_window(image, window_size):
     diameter = math.floor(window_size / 2)                    #To move the window around boundary pixels
     image_pad = np.pad(image, diameter, 'reflect')
     land_use_map_pad = np.zeros(image_pad.shape)
+    land_use_mask_pad = np.zeros(image_pad.shape)
     max_row, max_col = image.shape
     for i in range(diameter, max_row - diameter + 1):
         for j in range(diameter, max_col - diameter + 1):
@@ -37,13 +38,22 @@ def landuse_window(image, window_size):
                 continue
             else: 
                 class_count = (image_window == image_pad[i, j]).sum()
-                land_use_map_pad[i, j] = ((image_pad[i, j] * 100) + ((class_count/(window_size** 2)) * 100)) - 1
+                prop = class_count/(window_size** 2) 
+                if prop >= 0.70: 
+                    land_use_mask_pad[i, j] = 1
+                if prop == 1:
+                    land_use_map_pad[i, j] = ((image_pad[i, j] * 100) + (prop * 100)) - 0.1
+                else:
+                    land_use_map_pad[i, j] = ((image_pad[i, j] * 100) + (prop * 100))
 
     land_use_map = land_use_map_pad[diameter : diameter + max_row, diameter : diameter + max_col]
+    land_use_mask = land_use_mask_pad[diameter : diameter + max_row, diameter : diameter + max_col]
     i, j = np.where(land_use_map == 0)
     land_use_map[i, j] = np.nan
-    return land_use_map
-land_use = landuse_window(class_mat, window_size = 21)
+    i, j = np.where(land_use_mask == 0)
+    land_use_mask[i, j] = np.nan
+    return land_use_map, land_use_mask
+land_use_map_out, land_use_mask_out = landuse_window(class_mat, window_size = 3)
 """
 plt.imshow(land_use)
 plt.colorbar()
@@ -100,5 +110,5 @@ def array2raster(newRasterfn, dataset, array, dtype):
 data_out_loc = (r'C:\\Users\\mudel\OneDrive - Università di Pavia\\'
             r'2018_2019_PhD\\Information Theory for Big data UFAL 2019\\'
             r'mosquito_pop_landsat_Sentinel\\classification_map_vila_velha\\'
-            r'vilavelha_land_use_map_window_21.tif')
-array2raster(data_out_loc, class_map, land_use, 'Float32' )
+            r'vilavelha_land_use_mask70_window_3.tif')
+array2raster(data_out_loc, class_map, land_use_mask_out, 'Float32' )
